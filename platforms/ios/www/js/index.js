@@ -29,6 +29,7 @@ var app = {
     onDeviceReady: function() {
         this.receivedEvent('deviceready');
         startMonitoringAndRanging();
+        startNearestBeaconDisplayTimer();
         displayRegionEvents();
     },
 
@@ -48,6 +49,8 @@ var app = {
 app.initialize();
 //variable declarations
 
+var mRegionEvents = [];
+
 //an array of regions
 var mRegions = [
             {
@@ -62,6 +65,9 @@ var mRegionStateNames = {
     'CLRegionStateOutside' : 'Exit'
 };
 
+// Nearest ranged beacon.
+var mNearestBeacon = null;
+
 var displayFlag = 0;
 var jsonData;
 
@@ -71,33 +77,43 @@ var mRegionData = {
     //ith-basement is the id of the first region
 }
 
+function startNearestBeaconDisplayTimer(){
+    mNearestDisplayTimer = setInterval(displayNearestBeacon, 1000);
+}
 
+function displayNearestBeacon(){
+
+}
 function startMonitoringAndRanging() {
     console.log('started the function');
     
     
-    function onDidDetermineStateForRegion (pluginResult) {
-        console.log("did determine state for region "+ JSON.stringify(pluginResult));
-        //alert('pluginResult.state ' + pluginResult.state);
+    function onDidDetermineStateForRegion (result) {
+        //console.log("did determine state for region "+ JSON.stringify(pluginResult));
+        alert('pluginResult.state ' + pluginResult.state);
+        saveRegionEvents(result.state, result.region.identifier);
+        displayRecentRegionEvents();
 
     };
 
     function onDidRangeBeaconsInRegion(data) {
         console.log('did Range Beacons In Region: ' + JSON.stringify(data) );
-        if(data.beacons.length > 0){
-            displayBeaconMessage(data);
-            JSON.stringify(data)
-            displayFlag = 1;
-        }else{
-            alert('Beacon Flag not connected');
-        }
+        // if(data.beacons.length > 0){
+        //     displayBeaconMessage(data);
+        //     JSON.stringify(data)
+        //     displayFlag = 1;
+        // }else{
+        //     //alert('Beacon Flag not connected');
+        // }
+
+        updateNearestBeacon(data.beacons);
         
     }
     
     
     function displayBeaconMessage(data){
         if(displayFlag == 0){
-           alert('Connected to beacon: ' + data.region["identifier"] );
+           //alert('Connected to beacon: ' + data.region["identifier"] );
         }
         
     }
@@ -142,5 +158,83 @@ function startMonitoringAndRangingRegion(region, onError){
     cordova.plugins.locationManager.startRangingBeaconsInRegion(beaconRegion).fail(onError).done();
 }
 
+function saveRegionEvents(eventType, regionId){
+    mRegionEvents.push(
+        {
+            type: eventType,
+            regionId: regionId
+        }
+    );
+    
+    //if more than 10 events then truncate
+    if(mRegionEvents.length > 10){
+        mRegionEvents.shift();
+    }
+    
+}
+
+function displayRecentRegionEvents(){
+    //TODO: write code for background
+    
+    displayRegionEvents();
+    
+    
+    
+}
+
 function displayRegionEvents() {
+    //displays the events of the mRegionEvents 
+    var events = document.getElementById('events');
+    for(var i = mRegionEvents.length - 1; i >= 0; i--){
+        var event = mRegionEvents[i];
+        var title = getTitleFromEvent(event);
+        var element = title;
+        events.append(element)
+    }
+
+    if(mRegionEvents.length <= 0){
+        var element = "Waiting for a beacon connection";
+        events.append(element)
+    }
+}
+
+function getTitleFromEvent(event){
+    return  mRegionStateNames[event.type] + ' '
+    + mRegionData[event.regionId] + ' '
+   + mRegionData[event.state];
+}
+
+function updateNearestBeacon(beacons){
+    for(var i = 0; i < 2; i++){
+        var beacon = beacons[i];
+        if(!mNearestBeacon){
+            mNearestBeacon = beacon;
+        }
+        else{
+//            if(isSameBeacon(beacon, mNearestBeacon) || isNearThan(beacon, mNearestBeacon)){
+//                mNearestBeacon = beacon;
+//            }
+        }
+
+    }
+}
+
+function displayNearestBeacon(){
+    if (!mNearestBeacon) {return;}
+    var beconElement = document.getElementById('beacon');
+    
+    var element = 'Proximity: ' + mNearestBeacon.proximity + '<br />';
+    
+    beconElement.append(element);
+}
+
+function getBeaconId(beacon){
+    return beacon.uuid + ':' + beacon.major + ':' + beacon.minor;
+}
+function isSameBeacon(beacon1, beacon2){
+    //return getBeaconId(beacon1) == getBeaconId(beacon2);
+}
+
+function isNearThan(beacon1, beacon2){
+    return beacon1.accuracy > 0 && beacon2.accuracy > 0 && beacon1.accuracy < beacon2.accuracy;
 }
