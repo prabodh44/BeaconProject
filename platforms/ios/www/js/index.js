@@ -84,7 +84,7 @@ var jsonData;
 var mRegionData = {
     'ith-basement' : 'ITH-basement beacon',
     'ith-top-floor' : 'ITH top floor beacon'
-    //ith-basement is the id of the first region
+    //ith-basement is the id of the first region     
 }
 
 
